@@ -1,4 +1,4 @@
-# likelihood-aware-face-attribute-edditing
+# likelihood-aware-face-attribute-editing
 
 ## **command:**
 
