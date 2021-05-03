@@ -2,7 +2,8 @@ import pyro
 import pyro.distributions as dist
 import torch
 import pyro.params.param_store as param_store
-import pyro.poutine as poutine
+from pyro import poutine
+from pyro.infer import config_enumerate, infer_discrete
 
 
 class pyro_model:
@@ -35,60 +36,53 @@ class sex_mus_model(pyro_model):
 
     def __init__(self, paramdict):
         super().__init__(paramdict)
-        names = self.paramdict.keys()
 
-        assert "sex_prob" in names
-        self.sex_prob = self.paramdict.get_param("sex_prob")
+        self.paramdict = paramdict
 
-        assert "mus_male" in names
-        self.mus_male = self.paramdict.get_param("mus_male")
 
-        assert "mus_female" in names
-        self.mus_female = self.paramdict.get_param("mus_female")
 
-    def get_conditional_prob(self, *args, **kwargs):
 
-        assert 'Mustache' in kwargs
-        mustache = torch.tensor(kwargs['Mustache'])
-        mustache = torch.clamp(mustache, 0)
+    def determined_model(self):
+        laten_sex = self.paramdict.get_param('latent_sex')
+        laten_mus_1 = self.paramdict.get_param("latent_female_mustache")
+        laten_mus_2 = self.paramdict.get_param("latent_male_mustache")
+        laten_mus = [laten_mus_1, laten_mus_2]
 
-        def deterministic_model(Male=None, Mustache=None):
-            Male = pyro.sample('Male', dist.Bernoulli(self.sex_prob), obs=Male)
-            mustache_prob = self.mus_male * Male + self.mus_female * (1 - Male)
-            Mustache = pyro.sample('Mustache', dist.Bernoulli(mustache_prob), obs=Mustache)
+        laten_makeup_1 = self.paramdict.get_param("latent_female_makeup")
+        laten_makeup_2 = self.paramdict.get_param("latent_male_makeup")
+        laten_makeup = [laten_makeup_1, laten_makeup_2]
 
-        def deterministic_guide(Male=None, Mustache=None):
-            pass
+        laten_young = self.paramdict.get_param('latent_young')
 
-        enum_model = pyro.infer.config_enumerate(deterministic_model)
-        elbo = pyro.infer.TraceEnum_ELBO(max_plate_nesting=0)
+        laten_ear_1 = self.paramdict.get_param("latent_female_no_makeup_ear")
+        laten_ear_2 = self.paramdict.get_param("latent_female_makeup_ear")
+        laten_ear_3 = self.paramdict.get_param("latent_male_no_makeup_ear")
+        laten_ear_4 = self.paramdict.get_param("latent_male_makeup_ear")
+        laten_ear = [[laten_ear_1, laten_ear_2], [laten_ear_3, laten_ear_4]]
 
-        conditional_marginals = elbo.compute_marginals(enum_model, deterministic_guide, Mustache=mustache.float())
+        laten_bag_1 = self.paramdict.get_param("latent_old_no_makeup_ear")
+        laten_bag_2 = self.paramdict.get_param("latent_old_makeup_ear")
+        laten_bag_3 = self.paramdict.get_param("latent_young_no_makeup_ear")
+        laten_bag_4 = self.paramdict.get_param("latent_young_makeup_ear")
+        laten_bag = [[laten_bag_1, laten_bag_2], [laten_bag_3, laten_bag_4]]
+        with pyro.plate("a_plate", size=1, dim=-2):
+            sex = pyro.sample('sex', dist.Bernoulli(laten_sex))
+            young = pyro.sample('young', dist.Bernoulli(laten_young))
+            with pyro.plate("b_plate", size=1, dim=-1):
+                pyro.sample("mustache", dist.Bernoulli(laten_mus[sex.long()]))
+                makeup = pyro.sample("makeup", dist.Bernoulli(laten_makeup[sex.long()]))
 
-        sex_res = conditional_marginals['Male'].log_prob(torch.tensor(1.0)).exp().item()
+                ear = pyro.sample("ear", dist.Bernoulli(laten_ear[sex.long()][makeup.long()]))
+                bag = pyro.sample("bag", dist.Bernoulli(laten_bag[young.long()][makeup.long()]))
 
-        return {'Male': sex_res}
+    def make_log_joint(self):
+        def _log_joint(data, *args, **kwargs):
+            conditioned_model = poutine.condition(self.determined_model, data=data)
 
-    def get_joint_prob(self, *args, **kwargs):
+            trace = poutine.trace(conditioned_model).get_trace(*args, **kwargs)
 
-        assert 'Mustache' in kwargs
-        mustache = torch.tensor(kwargs['Mustache'])
+            return trace.log_prob_sum()
 
-        male = None
-        try:
-            male = torch.tensor(kwargs['Male'])
-        except:
-            pass
-
-        # We check if the joint probability of the original sex + mustache is over 0.7 we will keep
-        # the original label for the related attributes
-        if male is not None:
-            sex_prob = self.sex_prob if male.item() == 1 else (1-self.sex_prob)
-            mustache_prob = self.mus_male * male + self.mus_female * (1 - male) if mustache.item() == 1 else (1 - self.mus_male) * male + (1 - self.mus_female) * (1 - male)
-            joint_prob = mustache_prob*sex_prob
-        else:
-            joint_prob = torch.tensor(0.0)
-
-        return joint_prob
+        return _log_joint
 
 
