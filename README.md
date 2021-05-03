@@ -11,13 +11,12 @@ It means edit attribute #0 and #1 to value 0 and 0 respectively for image 1&2.
 ## **Likelihood graph:**
 
 ```
-                  Male 
-                /   |  \  
-               /    |   \
-              /     |    \
-Young  Heavy_Makeup |   Mustache/Beard
-  \        /    \   |
-   \      /      \  |  
-    \    /        \ |
-  Bags_Under_Eyes  Wearing_Earrings 
+   Young        Male 
+       \       /    \  
+        \     /      \
+         \   /        \
+          Bald        Mustache
+                      /    
+                     /   
+                  Beard
 ```
