@@ -10,11 +10,11 @@ import json
 import torch
 
 
-att_name_list = ["sex", "young", "mustache", "makeup", "ear", "bag"]
+att_name_list = ["sex", "young", "mustache", "Beard", "Bald"]
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-a', '--attribute', nargs='+', type=str, help='Attributes supposed to be modified (0-5)')
+parser.add_argument('-a', '--attribute', nargs='+', type=str, help='Attributes supposed to be modified (0-4)')
 parser.add_argument('-v', '--att_value', nargs='+', type=str,  help='Attribute values for the attributes we want to modify (0/1)')
 # parser.add_argument('-d', '--dataroot', type=str, default='../Dataset')
 parser.add_argument('-i', '--img', type=str, nargs='+', default=None, help='e.g., --img 182638')
@@ -53,9 +53,8 @@ graph_params.load(arg.graph)
 model = sex_mus_model(graph_params)
 
 dataset = pd.read_csv("list_attr_celeba.txt", sep = ' ', header=1, skiprows = 0)
-data = np.vstack((dataset['Male'], dataset["Young"],
-                      np.minimum(dataset["Mustache"] + (1 - dataset["No_Beard"]) + dataset["Goatee"], 1),
-                      dataset["Heavy_Makeup"], dataset["Bags_Under_Eyes"], dataset["Wearing_Earrings"]))
+data = np.vstack((dataset['Male'], dataset["Young"], dataset["Mustache"], (-dataset["No_Beard"]), dataset["Bald"]))
+
 data = np.maximum(data, 0)[:,imgs]
 # print("0:Male, 1:Young, 2:Mustache, 3:Heavy makeup, 4:Bags_under_eyes, 5:Wear earrings")
 

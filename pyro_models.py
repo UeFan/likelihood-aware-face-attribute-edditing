@@ -1,7 +1,6 @@
 import pyro
 import pyro.distributions as dist
 import torch
-import pyro.params.param_store as param_store
 from pyro import poutine
 from pyro.infer import config_enumerate, infer_discrete
 
@@ -40,40 +39,34 @@ class sex_mus_model(pyro_model):
         self.paramdict = paramdict
 
 
-
-
     def determined_model(self):
         laten_sex = self.paramdict.get_param('latent_sex')
+
         laten_mus_1 = self.paramdict.get_param("latent_female_mustache")
         laten_mus_2 = self.paramdict.get_param("latent_male_mustache")
         laten_mus = [laten_mus_1, laten_mus_2]
 
-        laten_makeup_1 = self.paramdict.get_param("latent_female_makeup")
-        laten_makeup_2 = self.paramdict.get_param("latent_male_makeup")
-        laten_makeup = [laten_makeup_1, laten_makeup_2]
+        laten_beard_1 = self.paramdict.get_param("latent_no_mustache_beard")
+        laten_beard_2 = self.paramdict.get_param("latent_mustache_beard")
+        laten_beard = [laten_beard_1, laten_beard_2]
 
         laten_young = self.paramdict.get_param('latent_young')
 
-        laten_ear_1 = self.paramdict.get_param("latent_female_no_makeup_ear")
-        laten_ear_2 = self.paramdict.get_param("latent_female_makeup_ear")
-        laten_ear_3 = self.paramdict.get_param("latent_male_no_makeup_ear")
-        laten_ear_4 = self.paramdict.get_param("latent_male_makeup_ear")
-        laten_ear = [[laten_ear_1, laten_ear_2], [laten_ear_3, laten_ear_4]]
+        laten_bald_1 = self.paramdict.get_param("latent_female_old_bald")
+        laten_bald_2 = self.paramdict.get_param("latent_female_young_bald")
+        laten_bald_3 = self.paramdict.get_param("latent_male_old_bald")
+        laten_bald_4 = self.paramdict.get_param("latent_male_young_bald")
+        laten_bald = [[laten_bald_1, laten_bald_2], [laten_bald_3, laten_bald_4]]
 
-        laten_bag_1 = self.paramdict.get_param("latent_old_no_makeup_ear")
-        laten_bag_2 = self.paramdict.get_param("latent_old_makeup_ear")
-        laten_bag_3 = self.paramdict.get_param("latent_young_no_makeup_ear")
-        laten_bag_4 = self.paramdict.get_param("latent_young_makeup_ear")
-        laten_bag = [[laten_bag_1, laten_bag_2], [laten_bag_3, laten_bag_4]]
         with pyro.plate("a_plate", size=1, dim=-2):
             sex = pyro.sample('sex', dist.Bernoulli(laten_sex))
             young = pyro.sample('young', dist.Bernoulli(laten_young))
-            with pyro.plate("b_plate", size=1, dim=-1):
-                pyro.sample("mustache", dist.Bernoulli(laten_mus[sex.long()]))
-                makeup = pyro.sample("makeup", dist.Bernoulli(laten_makeup[sex.long()]))
+            #         with pyro.plate("b_plate", size=1, dim=-1):
 
-                ear = pyro.sample("ear", dist.Bernoulli(laten_ear[sex.long()][makeup.long()]))
-                bag = pyro.sample("bag", dist.Bernoulli(laten_bag[young.long()][makeup.long()]))
+            mus = pyro.sample("mustache", dist.Bernoulli(laten_mus[sex.long()]))
+            beard = pyro.sample("beard", dist.Bernoulli(laten_beard[mus.long()]))
+
+            bald = pyro.sample("bald", dist.Bernoulli(laten_bald[sex.long()][young.long()]))
 
     def make_log_joint(self):
         def _log_joint(data, *args, **kwargs):
