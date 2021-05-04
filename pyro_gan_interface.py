@@ -10,7 +10,7 @@ import json
 import torch
 
 
-att_name_list = ["sex", "young", "mustache", "Beard", "Bald"]
+att_name_list = ["Male", "Young", "Mustache", "Beard", "Bald"]
 
 parser = argparse.ArgumentParser()
 
@@ -62,6 +62,14 @@ def get_diff_att(model, idx_img, times):
     '''
     Take supposed modified attributes and return the corresponding label list
     '''
+    def attribute_needed_to_flip(ori,new):
+        att_list = []
+        for k in ori:
+            if ori[k] != new[k]:
+                if(k == 'Beard'):
+                    k = 'No_beard'
+                att_list.append(k)
+        return att_list
 
     def decimalToBinary(n):
         return bin(n).replace("0b", "")
@@ -109,18 +117,17 @@ def get_diff_att(model, idx_img, times):
                 prob_list.append(scale_log_joint(att_modified_).exp().item())
             prob_list = (prob_list / np.sum(prob_list)).tolist()
             sample_idx = np.random.choice(a=np.arange(len(prob_list)).tolist(), size=1, p=prob_list)[0]
-            res_list.append(att_modified_sample_result[int(sample_idx)])
-
+            res_list.append( attribute_needed_to_flip(att_ori, att_modified_sample_result[int(sample_idx)]) )
+            intensity_list.append(np.random.rand(len(res_list[-1])).tolist())
 
     else:
         for time in range(times):
-            res_list.append(att_modified)
-
+            res_list.append(attribute_needed_to_flip(att_ori, att_modified))
+            intensity_list.append(np.random.rand(len(res_list[-1])).tolist())
     print(att_ori)
     print(res_list)
     print()
-    for time in range(times):
-        intensity_list.append(np.random.rand(len(att_name_list)).tolist())
+
 
 
 
@@ -135,7 +142,7 @@ if __name__ == '__main__':
 
     for i in range(len(imgs)):
         each_att_list, each_intensity_list = get_diff_att(model, i, times=times)
-        modified_att_list.append(each_att_list)
+        modified_att_list += each_att_list
         intensity_list += each_intensity_list
 
 
@@ -147,7 +154,7 @@ if __name__ == '__main__':
     res_dict['intensity_list'] = intensity_list
 
     print(res_dict)
-    # with open('interface_param.json', 'w') as f:
-    #     json.dump(res_dict, f)
-    #
-    # os.system('python stgan.py')
+    with open('interface_param.json', 'w') as f:
+        json.dump(res_dict, f)
+
+    os.system('python stgan.py')
