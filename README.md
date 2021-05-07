@@ -3,7 +3,7 @@
 ## **command:**
 
 ```
-python pyro_gan_interface.py --attribute 1 0 --att_value 0 0 --img 1 2
+python experiments_pyro.py  --attribute 1 0 --att_value 0 0 --img 1 2
 ```
 
 ```
