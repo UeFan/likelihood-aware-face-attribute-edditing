@@ -10,7 +10,7 @@ import json
 import torch
 
 
-att_name_list = ["Male", "Young", "Mustache", "Beard", "Bald"]
+att_name_list = ["sex", "young", "mustache", "beard", "bald"]
 
 parser = argparse.ArgumentParser()
 
@@ -55,7 +55,7 @@ model = sex_mus_model(graph_params)
 dataset = pd.read_csv("list_attr_celeba.txt", sep = ' ', header=1, skiprows = 0)
 data = np.vstack((dataset['Male'], dataset["Young"], dataset["Mustache"], (-dataset["No_Beard"]), dataset["Bald"]))
 
-data = np.maximum(data, 0)[:,imgs]
+data = np.maximum(data, 0)[:,np.array(imgs) - 1]
 # print("0:Male, 1:Young, 2:Mustache, 3:Heavy makeup, 4:Bags_under_eyes, 5:Wear earrings")
 
 def get_diff_att(model, idx_img, times):
