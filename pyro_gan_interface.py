@@ -11,7 +11,7 @@ import torch
 
 
 att_name_list = ["sex", "young", "mustache", "beard", "bald"]
-
+output_att_name_list =  {"sex":"Male", "young":"Young", "mustache":"Mustache", "beard":"No_Beard", "bald":"Bald"}
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-a', '--attribute', nargs='+', type=str, help='Attributes supposed to be modified (0-4)')
@@ -66,9 +66,7 @@ def get_diff_att(model, idx_img, times):
         att_list = []
         for k in ori:
             if ori[k] != new[k]:
-                if(k == 'Beard'):
-                    k = 'No_beard'
-                att_list.append(k)
+                att_list.append(output_att_name_list[k])
         return att_list
 
     def decimalToBinary(n):
